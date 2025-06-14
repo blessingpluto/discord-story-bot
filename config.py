@@ -14,9 +14,14 @@ YOUR_USERNAME = "your_username"
 TARGET_USERNAME = "target_username"
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/..."
 
+ENABLE_DISCORD_LOGS = False
+DISCORD_LOGS_WEBHOOK_URL = "https://discord.com/api/webhooks/..."
+
 DOWNLOAD_DIR = f"{TARGET_USERNAME}_stories"
 SENT_FILE = "sent_stories.txt"
 
 # Scheduling intervals
-STORY_DOWNLOAD_INTERVAL_MINUTES = 10
-CHECKSUM_CLEANUP_INTERVAL_MINUTES = 24
+STORY_DOWNLOAD_INTERVAL_MINUTES = 5
+CHECKSUM_CLEANUP_INTERVAL_MINUTES = 1440
+
+LOG_LEVEL = "DEBUG"

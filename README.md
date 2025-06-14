@@ -69,6 +69,13 @@ The bot will:
   CHECKSUM_CLEANUP_INTERVAL_MINUTES to your preferred time.
 - Extend with logging or error handling as needed.
 
+## Logging
+The bot includes a flexible logging system with the option to send logs to a discord channel. You can configure the log level setting **LOG_LEVEL** option in config.py.
+
+### 🔔 Discord Logging (optional)
+You can receive log notifications directly in a Discord channel via a webhook. You must set the variable **ENABLE_DISCORD_LOGS** to _True_
+and configure the **DISCORD_LOGS_WEBHOOK_URL** option.
+
 ## Troubleshooting
 
 If you encounter any issue while logging in or downloading stories (e.g., `KeyError: 'data'`), follow the steps below to

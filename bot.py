@@ -5,11 +5,13 @@ import glob
 import schedule
 import time
 import hashlib
+import traceback
+from logger import logger
 from config import TARGET_USERNAME, DISCORD_WEBHOOK_URL, YOUR_USERNAME, DOWNLOAD_DIR, SENT_FILE, STORY_DOWNLOAD_INTERVAL_MINUTES, CHECKSUM_CLEANUP_INTERVAL_MINUTES
 
 
 def clean_directory(path):
-    print("Cleaning dir " + path + "...")
+    logger.info("Cleaning dir " + path + "...")
     files = glob.glob(path + '/*')
     for f in files:
         os.remove(f)
@@ -18,7 +20,7 @@ def clean_directory(path):
 def clean_sent_hashes():
     with open(SENT_FILE, "w") as f:
         pass  # svuota il file riscrivendolo vuoto
-    print("Checksum cleaning done, list is now resetted.")
+    logger.debug("Checksum cleaning done, list is now resetted.")
 
 
 def format_filename(item):
@@ -36,7 +38,7 @@ def file_checksum(path):
 
 
 def job():
-    print("Starting job. Checking for stories...")
+    logger.info("Starting job. Checking for stories...")
     clean_directory(DOWNLOAD_DIR)
     # Carica hash già inviati
     if os.path.exists(SENT_FILE):
@@ -45,22 +47,18 @@ def job():
     else:
         sent_hashes = set()
 
-    L = instaloader.Instaloader(dirname_pattern=DOWNLOAD_DIR)
-    L.load_session_from_file(YOUR_USERNAME)
-    profile = instaloader.Profile.from_username(L.context, TARGET_USERNAME)
-
     for story in L.get_stories(userids=[profile.userid]):
         for item in story.get_items():
             success = L.download_storyitem(item, target=DOWNLOAD_DIR)
             if not success:
-                print(f"Error downloading story {item.mediaid}")
+                logger.error(f"Error downloading story {item.mediaid}")
                 continue
 
             fpath = format_filename(item)
             if os.path.exists(fpath):
                 checksum = file_checksum(fpath)
                 if checksum in sent_hashes:
-                    print(f"Story with checksum {checksum} alraedy sent. Skipping.")
+                    logger.debug(f"Story with checksum {checksum} already sent. Skipping.")
                     continue
 
                 with open(fpath, "rb") as f:
@@ -69,21 +67,30 @@ def job():
                         files={"file": (os.path.basename(fpath), f)},
                         data={"content": f"📸 @everyone New story from **{TARGET_USERNAME}**"},
                     )
-                    print(f"Sent story {item.mediaid} -> {response.status_code}")
+                    logger.debug(f"Sent story {item.mediaid} -> {response.status_code}")
 
                 with open(SENT_FILE, "a") as f:
                     f.write(checksum + "\n")
                     sent_hashes.add(checksum)
             else:
-                print(f"File not found: {fpath}")
-    print("Ending job.")
+                logger.info(f"File not found: {fpath}")
+    logger.info("Ending job.")
 
 
 schedule.every(STORY_DOWNLOAD_INTERVAL_MINUTES).minutes.do(job)
 schedule.every(CHECKSUM_CLEANUP_INTERVAL_MINUTES).minutes.do(clean_sent_hashes)
 
-print("Scheduler started. CTRL+C to stop.")
-job()
+try:
+    logger.info("Scheduler started. CTRL+C to stop.")
+    L = instaloader.Instaloader(dirname_pattern=DOWNLOAD_DIR)
+    L.load_session_from_file(YOUR_USERNAME)
+    profile = instaloader.Profile.from_username(L.context, TARGET_USERNAME)
+    job()
+except Exception as e:
+    error_trace = traceback.format_exc()
+    logger.error(f"Error during job execution:\n{error_trace}")
+    raise e
+
 while True:
     schedule.run_pending()
     time.sleep(1)
